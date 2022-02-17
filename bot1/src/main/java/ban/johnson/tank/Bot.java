@@ -38,12 +38,8 @@ public class Bot {
         Car myCar = gameState.player;
         Car opponent = gameState.opponent;
 
-        // Basic fix logic
-        List<Object> blocks = getBlocksInFront(myCar.position.lane, myCar.position.block, gameState);
-        List<Object> nextBlocks = blocks.subList(0, 1);
-
-        // Fix first if too damaged to move
-        if (myCar.damage == 5) {
+        // Fix first
+        if (myCar.damage >= 2 || (myCar.damage == 1 && hasPowerUp(PowerUps.BOOST, myCar.powerups))) {
             return FIX;
         }
 
@@ -52,15 +48,13 @@ public class Bot {
             return ACCELERATE;
         }
 
+        List<Object> blocks = getBlocksInFront(myCar.position.lane, myCar.position.block, myCar.speed, gameState);
+        int[] obscleCount = countObstacles(blocks);
+
         // Basic avoidance logic
-        if (blocks.contains(Terrain.MUD) || nextBlocks.contains(Terrain.WALL)) {
-            if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
-                return LIZARD;
-            }
-            if (nextBlocks.contains(Terrain.MUD) || nextBlocks.contains(Terrain.WALL)) {
-                int i = random.nextInt(directionList.size());
-                return directionList.get(i);
-            }
+        if ((obscleCount[0] > 0 || obscleCount[1] > 0) &&
+                hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
+            return LIZARD;
         }
 
         // Basic improvement logic
@@ -94,21 +88,37 @@ public class Bot {
      * Returns map of blocks and the objects in the for the current lanes, returns
      * the amount of blocks that can be traversed at max speed.
      **/
-    private List<Object> getBlocksInFront(int lane, int block, GameState gameState) {
+    private List<Object> getBlocksInFront(int lane, int block, int range, GameState gameState) {
         List<Lane[]> map = gameState.lanes;
         List<Object> blocks = new ArrayList<>();
         int startBlock = map.get(0)[0].position.block;
 
         Lane[] laneList = map.get(lane - 1);
-        for (int i = max(block - startBlock, 0); i <= block - startBlock + Bot.maxSpeed; i++) {
+        for (int i = max(block - startBlock, 0); i <= block - startBlock + range; i++) {
             if (laneList[i] == null || laneList[i].terrain == Terrain.FINISH) {
                 break;
             }
 
-            blocks.add(laneList[i].terrain);
-
+            if (laneList[i].isOccupiedByCyberTruck && !laneList[i].terrain.equals(Terrain.WALL)) {
+                blocks.add(Terrain.CYBER_TRUCK);
+            } else {
+                blocks.add(laneList[i].terrain);
+            }
         }
         return blocks;
     }
 
+    private int[] countObstacles(List<Object> blocks) {
+        int[] count = { 0, 0 };
+
+        for (Object block : blocks) {
+            if (block == Terrain.MUD || block == Terrain.OIL_SPILL) {
+                count[0]++;
+            } else if (block == Terrain.CYBER_TRUCK || block == Terrain.WALL) {
+                count[1]++;
+            }
+        }
+
+        return count;
+    }
 }

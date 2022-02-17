@@ -38,9 +38,6 @@ public class Bot {
         Car myCar = gameState.player;
         Car opponent = gameState.opponent;
 
-        // Basic fix logic
-        List<Object> blocks = getBlocksInFront(myCar.position.lane, myCar.position.block, myCar.speed, gameState);
-
         // Fix first if too damaged to move
         if (myCar.damage >= 2) {
             return FIX;
@@ -51,20 +48,22 @@ public class Bot {
             return ACCELERATE;
         }
 
+        // Basic fix logic
+        List<Object> blocks = getBlocksInFront(myCar.position.lane, myCar.position.block, myCar.speed, gameState);
+        int countObstacles[] = countObstacles(blocks);
+
         // Basic avoidance logic
-        if (blocks.contains(Terrain.MUD) ||
-                blocks.contains(Terrain.WALL) ||
-                blocks.contains(Terrain.OIL_SPILL)) {
+        if (countObstacles[0] > 0 || countObstacles[1] > 0) {
             if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
                 List<Object> nextBlock = blocks.subList(blocks.size() - 1, blocks.size());
                 if (!(nextBlock.contains(Terrain.MUD) ||
                         nextBlock.contains(Terrain.WALL) ||
-                        nextBlock.contains(Terrain.OIL_SPILL))) {
+                        nextBlock.contains(Terrain.OIL_SPILL) ||
+                        nextBlock.contains(Terrain.CYBER_TRUCK))) {
                     return LIZARD;
                 }
             }
 
-            int countObstacles[] = countObstacles(blocks);
             int lane = myCar.position.lane;
             if (lane == 1) {
                 List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
@@ -142,17 +141,22 @@ public class Bot {
         }
 
         // Basic aggression logic
-        if (hasPowerUp(PowerUps.OIL, myCar.powerups) &&
-                opponent.position.lane == myCar.position.lane &&
-                opponent.position.block < myCar.position.block) {
-            return OIL;
-        }
-        if (hasPowerUp(PowerUps.EMP, myCar.powerups) &&
-                opponent.position.block >= myCar.position.block) {
-            return EMP;
-        }
+        if (myCar.speed == maxSpeed) {
+            if (hasPowerUp(PowerUps.OIL, myCar.powerups) &&
+                    opponent.position.lane == myCar.position.lane &&
+                    opponent.position.block < myCar.position.block) {
+                return OIL;
+            }
+            if (hasPowerUp(PowerUps.EMP, myCar.powerups) &&
+                    opponent.position.block >= myCar.position.block) {
+                return EMP;
+            }
 
-        // Use Tweet
+            // Use Tweet
+            if (hasPowerUp(PowerUps.TWEET, myCar.powerups) && myCar.speed == maxSpeed) {
+                return new TweetCommand(opponent.position.lane, opponent.position.block + opponent.speed);
+            }
+        }
 
         return ACCELERATE;
     }
@@ -177,7 +181,7 @@ public class Bot {
 
         Lane[] laneList = map.get(lane - 1);
         for (int i = max(block - startBlock, 0); i <= block - startBlock + range; i++) {
-            if (laneList[i] == null || laneList[i].terrain == Terrain.FINISH) {
+            if (i >= laneList.length || laneList[i] == null || laneList[i].terrain == Terrain.FINISH) {
                 break;
             }
 
