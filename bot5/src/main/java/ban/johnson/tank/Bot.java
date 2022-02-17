@@ -72,11 +72,7 @@ public class Bot {
         // Basic avoidance logic
         if (countObstacles[0] > 0 || countObstacles[1] > 0) {
             if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
-                List<Object> nextBlock = blocks.subList(blocks.size() - 1, blocks.size());
-                if (!(nextBlock.contains(Terrain.MUD) ||
-                        nextBlock.contains(Terrain.WALL) ||
-                        nextBlock.contains(Terrain.OIL_SPILL) ||
-                        nextBlock.contains(Terrain.CYBER_TRUCK))) {
+                if ((countObstacles[0] + countObstacles[1]) > 3 || myCar.speed == 15) {
                     return LIZARD;
                 }
             }
@@ -89,7 +85,9 @@ public class Bot {
                 if ((countObstacles[1] > 0 && countrightObstacles[1] > 0) ||
                         (countrightObstacles[1] == 0) ||
                         countObstacles[1] > countrightObstacles[1] ||
-                        countObstacles[0] > countrightObstacles[0]) {
+                        countObstacles[0] > countrightObstacles[0] ||
+                        (countObstacles[1] == countrightObstacles[1] &&
+                                countObstacles[0] == countrightObstacles[0])) {
                     return TURN_RIGHT;
                 }
 
@@ -100,7 +98,9 @@ public class Bot {
                 if ((countObstacles[1] > 0 && countleftObstacles[1] > 0) ||
                         (countleftObstacles[1] == 0) ||
                         countObstacles[1] > countleftObstacles[1] ||
-                        countObstacles[0] > countleftObstacles[0]) {
+                        countObstacles[0] > countleftObstacles[0] ||
+                        (countObstacles[1] == countleftObstacles[1] ||
+                                countObstacles[0] == countleftObstacles[0])) {
                     return TURN_LEFT;
                 }
 
@@ -146,33 +146,38 @@ public class Bot {
             }
         }
 
+        if (hasPowerUp(PowerUps.EMP, myCar.powerups) &&
+                opponent.position.block >= myCar.position.block &&
+                opponent.speed > 3) {
+            return EMP;
+        }
+
         // Basic improvement logic
-        if (hasPowerUp(PowerUps.BOOST, myCar.powerups)) {
+        int[] hascount = hasCountPowerUp(myCar.powerups);
+        if (hasPowerUp(PowerUps.BOOST, myCar.powerups) && !myCar.boosting) {
             List<Object> boosted = getBlocksInFront(myCar.position.lane, myCar.position.block + 1, 15 - 1,
                     gameState);
             if (!(boosted.contains(Terrain.MUD) ||
                     boosted.contains(Terrain.WALL) ||
                     boosted.contains(Terrain.OIL_SPILL) ||
                     boosted.contains(Terrain.CYBER_TRUCK))) {
-                return BOOST;
+                if ((hascount[2] >= 3 && myCar.damage == 0) ||
+                        (myCar.speed <= 6 && myCar.damage > 0 && hascount[1] >= 2) ||
+                        (myCar.damage == 0 && hascount[1] >= 2)) {
+                    return BOOST;
+                }
             }
         }
 
         // Basic aggression logic
         if (myCar.speed == maxSpeed) {
+            if (hasPowerUp(PowerUps.TWEET, myCar.powerups) && myCar.speed == maxSpeed) {
+                return new TweetCommand(opponent.position.lane, opponent.position.block + opponent.speed + 1);
+            }
             if (hasPowerUp(PowerUps.OIL, myCar.powerups) &&
                     opponent.position.lane == myCar.position.lane &&
                     opponent.position.block < myCar.position.block) {
                 return OIL;
-            }
-            if (hasPowerUp(PowerUps.EMP, myCar.powerups) &&
-                    opponent.position.block >= myCar.position.block) {
-                return EMP;
-            }
-
-            // Use Tweet
-            if (hasPowerUp(PowerUps.TWEET, myCar.powerups) && myCar.speed == maxSpeed) {
-                return new TweetCommand(opponent.position.lane, opponent.position.block + opponent.speed);
             }
         }
 
@@ -186,6 +191,25 @@ public class Bot {
             }
         }
         return false;
+    }
+
+    private int[] hasCountPowerUp(PowerUps[] available) {
+        // { OIL_POWER, BOOST, LIZARD, TWEET, EMP }
+        int[] count = { 0, 0, 0, 0, 0 };
+        for (Object powerUp : available) {
+            if (powerUp.equals(PowerUps.OIL)) {
+                count[0]++;
+            } else if (powerUp.equals(PowerUps.BOOST)) {
+                count[1]++;
+            } else if (powerUp.equals(PowerUps.LIZARD)) {
+                count[2]++;
+            } else if (powerUp.equals(PowerUps.TWEET)) {
+                count[3]++;
+            } else if (powerUp.equals(PowerUps.EMP)) {
+                count[4]++;
+            }
+        }
+        return count;
     }
 
     /**

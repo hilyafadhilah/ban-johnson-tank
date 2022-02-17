@@ -3,6 +3,7 @@ package ban.johnson.tank;
 import ban.johnson.tank.command.*;
 import ban.johnson.tank.entities.*;
 import ban.johnson.tank.enums.PowerUps;
+import ban.johnson.tank.enums.State;
 import ban.johnson.tank.enums.Terrain;
 
 import java.util.*;
@@ -37,25 +38,37 @@ public class Bot {
     public Command run(GameState gameState) {
         Car myCar = gameState.player;
         Car opponent = gameState.opponent;
+        int[] hascount = hasCountPowerUp(myCar.powerups);
         int lane = myCar.position.lane;
 
         List<Object> blocks = getBlocksInFront(myCar.position.lane, myCar.position.block, myCar.speed, gameState);
 
-        // Fix first if too damaged to move
-        if (myCar.damage >= 2) {
-            return FIX;
+        if (myCar.state != null && myCar.state.equals(State.HIT_EMP)) {
+            if (hasPowerUp(PowerUps.EMP, myCar.powerups) && opponent.position.block >= myCar.position.block) {
+                return EMP;
+            }
+            if (myCar.damage > 0) {
+                return FIX;
+            }
+            if (hasPowerUp(PowerUps.TWEET, myCar.powerups)) {
+                return new TweetCommand(opponent.position.lane, opponent.position.block + opponent.speed + 1);
+            }
+            if (hasPowerUp(PowerUps.OIL, myCar.powerups)) {
+                return OIL;
+            }
         }
 
-        // Accelerate first if going to slow
-        if (myCar.speed <= 3) {
-            return ACCELERATE;
+        if (hascount[4] > 0) {
+            if (((1500 - opponent.position.block) / hascount[4]) < 10
+                    && opponent.position.block >= myCar.position.block) {
+                if (opponent.speed > 3) {
+                    return EMP;
+                }
+            }
         }
 
-        // Seek for power up (ignore if already have 5 powerup each type (gajadi))
-        // EMP > LIZARD > BOOST > TWEET > OIL_POWER
-        // { OIL_POWER, BOOST, LIZARD, TWEET, EMP }
-        // 0 1 2 3 4
-        if (myCar.speed >= 8) {
+        if ((myCar.position.block - opponent.position.block) < (hascount[4] * 8)
+                && (1500 - myCar.position.block) > 200) {
             int powerupmid[] = countPowerUp(blocks, myCar.powerups);
             if (lane == 1) {
                 List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
@@ -138,51 +151,23 @@ public class Bot {
             }
         }
 
-        // Use power up
-        if (hasPowerUp(PowerUps.EMP, myCar.powerups) &&
-                opponent.position.block >= myCar.position.block) {
-            return EMP;
-        }
-        if (blocks.contains(Terrain.MUD) ||
-                blocks.contains(Terrain.WALL) ||
-                blocks.contains(Terrain.OIL_SPILL)) {
-            if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
-                int countObstacles[] = countObstacles(blocks);
-                if ((countObstacles[0] + countObstacles[1]) > 3 || myCar.speed == 15) {
-                    return LIZARD;
-                }
-            }
-        }
-        int[] hascount = hasCountPowerUp(myCar.powerups);
-        if (hasPowerUp(PowerUps.BOOST, myCar.powerups) && myCar.damage == 0) {
-            List<Object> boosted = getBlocksInFront(myCar.position.lane, myCar.position.block, 15,
-                    gameState);
-            if ((!(boosted.contains(Terrain.MUD) ||
-                    boosted.contains(Terrain.WALL) ||
-                    boosted.contains(Terrain.OIL_SPILL))) &&
-                    hascount[1] >= 3) {
-                return BOOST;
-            }
-        }
-        if (hasPowerUp(PowerUps.TWEET, myCar.powerups) &&
-                myCar.speed == maxSpeed) {
-            return new TweetCommand(opponent.position.lane, opponent.position.block + opponent.speed);
-        }
-        if (hasPowerUp(PowerUps.OIL, myCar.powerups) &&
-                opponent.position.lane == myCar.position.lane &&
-                opponent.position.block < myCar.position.block) {
-            return OIL;
+        // Fix first if too damaged to move
+        if (myCar.damage >= 2) {
+            return FIX;
         }
 
-        // Menghindar
-        int[] countObstacles = countObstacles(blocks);
+        // Accelerate first if going to slow
+        if (myCar.speed <= 3) {
+            return ACCELERATE;
+        }
+
+        // Basic fix logic
+        int countObstacles[] = countObstacles(blocks);
+
+        // Basic avoidance logic
         if (countObstacles[0] > 0 || countObstacles[1] > 0) {
             if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
-                List<Object> nextBlock = blocks.subList(blocks.size() - 1, blocks.size());
-                if (!(nextBlock.contains(Terrain.MUD) ||
-                        nextBlock.contains(Terrain.WALL) ||
-                        nextBlock.contains(Terrain.OIL_SPILL) ||
-                        nextBlock.contains(Terrain.CYBER_TRUCK))) {
+                if ((countObstacles[0] + countObstacles[1]) > 3 || myCar.speed == 15) {
                     return LIZARD;
                 }
             }
@@ -194,7 +179,9 @@ public class Bot {
                 if ((countObstacles[1] > 0 && countrightObstacles[1] > 0) ||
                         (countrightObstacles[1] == 0) ||
                         countObstacles[1] > countrightObstacles[1] ||
-                        countObstacles[0] > countrightObstacles[0]) {
+                        countObstacles[0] > countrightObstacles[0] ||
+                        (countObstacles[1] == countrightObstacles[1] &&
+                                countObstacles[0] == countrightObstacles[0])) {
                     return TURN_RIGHT;
                 }
 
@@ -205,7 +192,9 @@ public class Bot {
                 if ((countObstacles[1] > 0 && countleftObstacles[1] > 0) ||
                         (countleftObstacles[1] == 0) ||
                         countObstacles[1] > countleftObstacles[1] ||
-                        countObstacles[0] > countleftObstacles[0]) {
+                        countObstacles[0] > countleftObstacles[0] ||
+                        (countObstacles[1] == countleftObstacles[1] ||
+                                countObstacles[0] == countleftObstacles[0])) {
                     return TURN_LEFT;
                 }
 
@@ -248,6 +237,34 @@ public class Bot {
                         return TURN_RIGHT;
                     }
                 }
+            }
+        }
+
+        // Basic improvement logic
+        if (hasPowerUp(PowerUps.BOOST, myCar.powerups) && !myCar.boosting) {
+            List<Object> boosted = getBlocksInFront(myCar.position.lane, myCar.position.block + 1, 15 - 1,
+                    gameState);
+            if (!(boosted.contains(Terrain.MUD) ||
+                    boosted.contains(Terrain.WALL) ||
+                    boosted.contains(Terrain.OIL_SPILL) ||
+                    boosted.contains(Terrain.CYBER_TRUCK))) {
+                if ((hascount[2] >= 3 && myCar.damage == 0) ||
+                        (myCar.speed <= 6 && myCar.damage > 0 && hascount[1] >= 2) ||
+                        (myCar.damage == 0 && hascount[1] >= 2)) {
+                    return BOOST;
+                }
+            }
+        }
+
+        // Basic aggression logic
+        if (myCar.speed == maxSpeed) {
+            if (hasPowerUp(PowerUps.TWEET, myCar.powerups) && myCar.speed == maxSpeed) {
+                return new TweetCommand(opponent.position.lane, opponent.position.block + opponent.speed + 1);
+            }
+            if (hasPowerUp(PowerUps.OIL, myCar.powerups) &&
+                    opponent.position.lane == myCar.position.lane &&
+                    opponent.position.block < myCar.position.block) {
+                return OIL;
             }
         }
 
@@ -300,7 +317,7 @@ public class Bot {
         }
 
         int[] hascount = hasCountPowerUp(available);
-        for (int i = 0; i < count.length; i++) {
+        for (int i = 0; i < count.length - 1; i++) {
             if (hascount[i] > 5) {
                 count[i] = 0;
             }
@@ -320,7 +337,7 @@ public class Bot {
 
         Lane[] laneList = map.get(lane - 1);
         for (int i = max(block - startBlock, 0); i <= block - startBlock + range; i++) {
-            if (laneList[i] == null || laneList[i].terrain == Terrain.FINISH) {
+            if (i >= laneList.length || laneList[i] == null || laneList[i].terrain == Terrain.FINISH) {
                 break;
             }
 
