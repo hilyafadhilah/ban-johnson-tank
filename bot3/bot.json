@@ -1,0 +1,8 @@
+{
+	"author": "John Doe",
+	"email": "John.Doe@example.com",
+	"nickName": "Johnson Powerup",
+	"botLocation": "/target",
+	"botFileName": "johnsonpowerup-jar-with-dependencies.jar",
+	"botLanguage": "java"
+}
