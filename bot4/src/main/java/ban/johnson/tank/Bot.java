@@ -24,6 +24,7 @@ public class Bot {
     private final static Command BOOST = new BoostCommand();
     private final static Command EMP = new EmpCommand();
     private final static Command FIX = new FixCommand();
+    private final static Command DO_NOTHING = new DoNothingCommand();
 
     private final static Command TURN_RIGHT = new ChangeLaneCommand(1);
     private final static Command TURN_LEFT = new ChangeLaneCommand(-1);
@@ -39,119 +40,47 @@ public class Bot {
         Car opponent = gameState.opponent;
         int lane = myCar.position.lane;
 
-        List<Object> blocks = getBlocksInFront(myCar.position.lane, myCar.position.block, myCar.speed, gameState);
-
         // Fix first if too damaged to move
         if (myCar.damage >= 2) {
             return FIX;
         }
 
-        // Accelerate first if going to slow
-        if (myCar.speed <= 3) {
-            return ACCELERATE;
+        int range = myCar.speed;
+
+        if (myCar.speed < 3) {
+            range = 3;
+        } else if (myCar.speed < 6) {
+            range = 6;
+        } else if (myCar.speed < 8) {
+            range = 8;
+        } else if (myCar.speed < 9) {
+            range = 9;
         }
 
-        // Seek for power up (ignore if already have 5 powerup each type (gajadi))
-        // EMP > LIZARD > BOOST > TWEET > OIL_POWER
-        // { OIL_POWER, BOOST, LIZARD, TWEET, EMP }
-        // 0 1 2 3 4
-        if (myCar.speed >= 8) {
-            int powerupmid[] = countPowerUp(blocks, myCar.powerups);
-            if (lane == 1) {
-                List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
-                int powerupright[] = countPowerUp(right, myCar.powerups);
-                if (powerupright[4] > powerupmid[4]) {
-                    return TURN_RIGHT;
-                } else if (powerupright[4] == powerupmid[4]) {
-                    if (powerupright[2] > powerupmid[2]) {
-                        return TURN_RIGHT;
-                    } else if (powerupright[2] == powerupmid[2]) {
-                        if (powerupright[1] > powerupmid[1]) {
-                            return TURN_RIGHT;
-                        } else if (powerupright[1] == powerupmid[1]) {
-                            if (powerupright[3] > powerupmid[3]) {
-                                return TURN_RIGHT;
-                            } else if (powerupright[3] == powerupmid[3]) {
-                                if (powerupright[0] > powerupmid[0]) {
-                                    return TURN_RIGHT;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if (lane == 4) {
-                List<Object> left = getBlocksInFront(lane - 1, myCar.position.block, myCar.speed - 1, gameState);
-                int powerupleft[] = countPowerUp(left, myCar.powerups);
-                if (powerupleft[4] > powerupmid[4]) {
-                    return TURN_LEFT;
-                } else if (powerupleft[4] == powerupmid[4]) {
-                    if (powerupleft[2] > powerupmid[2]) {
-                        return TURN_LEFT;
-                    } else if (powerupleft[2] == powerupmid[2]) {
-                        if (powerupleft[1] > powerupmid[1]) {
-                            return TURN_LEFT;
-                        } else if (powerupleft[1] == powerupmid[1]) {
-                            if (powerupleft[3] > powerupmid[3]) {
-                                return TURN_LEFT;
-                            } else if (powerupleft[3] == powerupmid[3]) {
-                                if (powerupleft[0] > powerupmid[0]) {
-                                    return TURN_LEFT;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
-                List<Object> left = getBlocksInFront(lane - 1, myCar.position.block, myCar.speed - 1, gameState);
-                int powerupright[] = countPowerUp(right, myCar.powerups);
-                int powerupleft[] = countPowerUp(left, myCar.powerups);
-                if (powerupleft[4] > powerupmid[4] && powerupleft[4] > powerupright[4]) {
-                    return TURN_LEFT;
-                } else if (powerupright[4] > powerupmid[4] && powerupright[4] > powerupmid[4]) {
-                    return TURN_RIGHT;
-                } else if (powerupleft[4] == powerupright[4] && powerupmid[4] <= powerupleft[4]) {
-                    if (powerupleft[2] > powerupmid[2] && powerupleft[2] > powerupright[2]) {
-                        return TURN_LEFT;
-                    } else if (powerupright[2] > powerupmid[2] && powerupright[2] > powerupmid[2]) {
-                        return TURN_RIGHT;
-                    } else if (powerupleft[2] == powerupright[4] && powerupmid[2] <= powerupleft[2]) {
-                        if (powerupleft[1] > powerupmid[1] && powerupleft[1] > powerupright[1]) {
-                            return TURN_LEFT;
-                        } else if (powerupright[1] > powerupmid[1] && powerupright[1] > powerupmid[1]) {
-                            return TURN_RIGHT;
-                        } else if (powerupleft[1] == powerupright[1] && powerupmid[1] <= powerupleft[1]) {
-                            if (powerupleft[3] > powerupmid[3] && powerupleft[3] > powerupright[3]) {
-                                return TURN_LEFT;
-                            } else if (powerupright[3] > powerupmid[3] && powerupright[3] > powerupmid[3]) {
-                                return TURN_RIGHT;
-                            } else if (powerupleft[3] == powerupright[3] && powerupmid[3] <= powerupleft[3]) {
-                                if (powerupleft[0] > powerupmid[0] && powerupleft[0] > powerupright[0]) {
-                                    return TURN_LEFT;
-                                } else if (powerupright[0] > powerupmid[0] && powerupright[0] > powerupmid[0]) {
-                                    return TURN_RIGHT;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        // Basic fix logic
+        List<Object> blocksaccelerate = getBlocksInFront(myCar.position.lane, myCar.position.block, range, gameState);
+        List<Object> blocks = getBlocksInFront(myCar.position.lane, myCar.position.block, myCar.speed, gameState);
+        int[] obstacleCount = countObstacles(blocks);
+
+        Command powerUpCmd = DO_NOTHING;
+
+        if (countScore(blocksaccelerate) > countScore(blocks)) {
+            powerUpCmd = ACCELERATE;
         }
 
         // Use power up
         if (hasPowerUp(PowerUps.EMP, myCar.powerups) &&
                 opponent.position.block >= myCar.position.block) {
-            return EMP;
+            powerUpCmd = EMP;
         }
-        if (blocks.contains(Terrain.MUD) ||
-                blocks.contains(Terrain.WALL) ||
-                blocks.contains(Terrain.OIL_SPILL)) {
+        if (obstacleCount[0] > 0 || obstacleCount[1] > 0) {
             if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
                 List<Object> nextBlock = blocks.subList(blocks.size() - 1, blocks.size());
                 if (!(nextBlock.contains(Terrain.MUD) ||
                         nextBlock.contains(Terrain.WALL) ||
-                        nextBlock.contains(Terrain.OIL_SPILL))) {
-                    return LIZARD;
+                        nextBlock.contains(Terrain.OIL_SPILL) ||
+                        nextBlock.contains(Terrain.CYBER_TRUCK))) {
+                    powerUpCmd = LIZARD;
                 }
             }
         }
@@ -161,39 +90,67 @@ public class Bot {
             if (!(boosted.contains(Terrain.MUD) ||
                     boosted.contains(Terrain.WALL) ||
                     boosted.contains(Terrain.OIL_SPILL))) {
-                return BOOST;
+                powerUpCmd = BOOST;
             }
         }
         if (hasPowerUp(PowerUps.TWEET, myCar.powerups) &&
                 myCar.speed == maxSpeed) {
-            return new TweetCommand(opponent.position.lane, opponent.position.block + opponent.speed);
+            powerUpCmd = new TweetCommand(opponent.position.lane, opponent.position.block + opponent.speed + 1);
         }
         if (hasPowerUp(PowerUps.OIL, myCar.powerups) &&
                 opponent.position.lane == myCar.position.lane &&
                 opponent.position.block < myCar.position.block) {
-            return OIL;
+            powerUpCmd = OIL;
+        }
+
+        int scoreMid = countScore(blocks);
+
+        if (powerUpCmd instanceof AccelerateCommand) {
+            scoreMid = countScore(blocksaccelerate);
+        } else if (!(powerUpCmd instanceof DoNothingCommand)) {
+            scoreMid += 4;
+        }
+
+        if (lane == 1) {
+            List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
+            int scoreRight = countScore(right);
+
+            if (scoreMid < scoreRight) {
+                return TURN_RIGHT;
+            }
+        } else if (lane == 4) {
+            List<Object> left = getBlocksInFront(lane - 1, myCar.position.block, myCar.speed - 1, gameState);
+            int scoreleft = countScore(left);
+            if (scoreleft > scoreMid) {
+                return TURN_LEFT;
+            }
+
+        } else {
+            List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
+            List<Object> left = getBlocksInFront(lane - 1, myCar.position.block, myCar.speed - 1, gameState);
+            int scoreright = countScore(right);
+            int scoreleft = countScore(left);
+            if (scoreleft > scoreright && scoreleft > scoreMid) {
+                return TURN_LEFT;
+            } else if (scoreright > scoreleft && scoreright > scoreMid) {
+                return TURN_RIGHT;
+            }
+        }
+
+        if (!(powerUpCmd instanceof DoNothingCommand)) {
+            return powerUpCmd;
         }
 
         // Menghindar
-        if (countObstacles[0] > 0 || countObstacles[1] > 0) {
-            if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
-                List<Object> nextBlock = blocks.subList(blocks.size() - 1, blocks.size());
-                if (!(nextBlock.contains(Terrain.MUD) ||
-                        nextBlock.contains(Terrain.WALL) ||
-                        nextBlock.contains(Terrain.OIL_SPILL) ||
-                        nextBlock.contains(Terrain.CYBER_TRUCK))) {
-                    return LIZARD;
-                }
-            }
-
+        if (obstacleCount[0] > 0 || obstacleCount[1] > 0) {
             if (lane == 1) {
                 List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
                 int countrightObstacles[] = countObstacles(right);
 
-                if ((countObstacles[1] > 0 && countrightObstacles[1] > 0) ||
+                if ((obstacleCount[1] > 0 && countrightObstacles[1] > 0) ||
                         (countrightObstacles[1] == 0) ||
-                        countObstacles[1] > countrightObstacles[1] ||
-                        countObstacles[0] > countrightObstacles[0]) {
+                        obstacleCount[1] > countrightObstacles[1] ||
+                        obstacleCount[0] > countrightObstacles[0]) {
                     return TURN_RIGHT;
                 }
 
@@ -201,10 +158,10 @@ public class Bot {
                 List<Object> left = getBlocksInFront(lane - 1, myCar.position.block, myCar.speed - 1, gameState);
                 int countleftObstacles[] = countObstacles(left);
 
-                if ((countObstacles[1] > 0 && countleftObstacles[1] > 0) ||
+                if ((obstacleCount[1] > 0 && countleftObstacles[1] > 0) ||
                         (countleftObstacles[1] == 0) ||
-                        countObstacles[1] > countleftObstacles[1] ||
-                        countObstacles[0] > countleftObstacles[0]) {
+                        obstacleCount[1] > countleftObstacles[1] ||
+                        obstacleCount[0] > countleftObstacles[0]) {
                     return TURN_LEFT;
                 }
 
@@ -214,7 +171,7 @@ public class Bot {
                 int countleftObstacles[] = countObstacles(left);
                 int countrightObstacles[] = countObstacles(right);
 
-                if (countObstacles[1] > 0) {
+                if (obstacleCount[1] > 0) {
                     if (countleftObstacles[1] == 0 && (countrightObstacles[0] >= countleftObstacles[0])) {
                         if (countrightObstacles[1] == 0 &&
                                 countrightObstacles[0] == countleftObstacles[0] &&
@@ -229,7 +186,7 @@ public class Bot {
                 } else {
                     if (countleftObstacles[1] == 0 &&
                             (countrightObstacles[0] >= countleftObstacles[0]) &&
-                            (countObstacles[0] > countleftObstacles[0])) {
+                            (obstacleCount[0] > countleftObstacles[0])) {
                         if (countrightObstacles[1] == 0 &&
                                 countrightObstacles[0] == countleftObstacles[0] &&
                                 lane == 2) {
@@ -238,7 +195,7 @@ public class Bot {
                         return TURN_LEFT;
                     } else if (countrightObstacles[1] == 0 &&
                             (countleftObstacles[0] >= countrightObstacles[0]) &&
-                            (countObstacles[0] > countrightObstacles[0])) {
+                            (obstacleCount[0] > countrightObstacles[0])) {
                         if (countleftObstacles[1] == 0 &&
                                 countrightObstacles[0] == countleftObstacles[0] &&
                                 lane == 3) {
@@ -281,31 +238,24 @@ public class Bot {
         return count;
     }
 
-    private int[] countPowerUp(List<Object> blocks, PowerUps[] available) {
-        int[] count = { 0, 0, 0, 0, 0 }; // { OIL_POWER, BOOST, LIZARD, TWEET, EMP }
+    private int countScore(List<Object> blocks) {
+        int score = 0;
 
         for (Object block : blocks) {
-            if (block == Terrain.OIL_POWER) {
-                count[0]++;
-            } else if (block == Terrain.BOOST) {
-                count[1]++;
-            } else if (block == Terrain.LIZARD) {
-                count[2]++;
-            } else if (block == Terrain.TWEET) {
-                count[3]++;
-            } else if (block == Terrain.EMP) {
-                count[4]++;
+            if (block == Terrain.OIL_POWER ||
+                    block == Terrain.BOOST ||
+                    block == Terrain.LIZARD ||
+                    block == Terrain.TWEET ||
+                    block == Terrain.EMP) {
+                score += 4;
+            } else if (block == Terrain.MUD) {
+                score -= 3;
+            } else if (block == Terrain.OIL_SPILL) {
+                score -= 4;
             }
         }
 
-        int[] hascount = hasCountPowerUp(available);
-        for (int i = 0; i < count.length; i++) {
-            if (hascount[i] > 5) {
-                count[i] = 0;
-            }
-        }
-
-        return count;
+        return score;
     }
 
     /**

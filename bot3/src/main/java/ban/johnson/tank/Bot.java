@@ -175,6 +175,7 @@ public class Bot {
         }
 
         // Menghindar
+        int[] countObstacles = countObstacles(blocks);
         if (countObstacles[0] > 0 || countObstacles[1] > 0) {
             if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
                 List<Object> nextBlock = blocks.subList(blocks.size() - 1, blocks.size());
