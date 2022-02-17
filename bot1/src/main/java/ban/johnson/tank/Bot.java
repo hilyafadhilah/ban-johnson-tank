@@ -39,7 +39,7 @@ public class Bot {
         Car opponent = gameState.opponent;
 
         // Fix first
-        if (myCar.damage >= 2 || (myCar.damage == 1 && hasPowerUp(PowerUps.BOOST, myCar.powerups))) {
+        if (myCar.damage >= 2) {
             return FIX;
         }
 
@@ -58,7 +58,7 @@ public class Bot {
         }
 
         // Basic improvement logic
-        if (hasPowerUp(PowerUps.BOOST, myCar.powerups)) {
+        if (myCar.damage == 0 && hasPowerUp(PowerUps.BOOST, myCar.powerups)) {
             return BOOST;
         }
 
