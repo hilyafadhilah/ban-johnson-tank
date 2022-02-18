@@ -130,6 +130,80 @@ public class Bot {
                                     return TURN_LEFT;
                                 } else if (powerupright[0] > powerupmid[0] && powerupright[0] > powerupmid[0]) {
                                     return TURN_RIGHT;
+                                } else if (powerupleft[0] == powerupright[0] && powerupmid[0] == powerupleft[0]) {
+                                    // Menghindar
+                                    int[] countObstacles = countObstacles(blocks);
+                                    if (countObstacles[0] > 0 || countObstacles[1] > 0) {
+                                        if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
+                                            List<Object> nextBlock = blocks.subList(blocks.size() - 1, blocks.size());
+                                            if (!(nextBlock.contains(Terrain.MUD) ||
+                                                    nextBlock.contains(Terrain.WALL) ||
+                                                    nextBlock.contains(Terrain.OIL_SPILL) ||
+                                                    nextBlock.contains(Terrain.CYBER_TRUCK))) {
+                                                return LIZARD;
+                                            }
+                                        }
+
+                                        if (lane == 1) {
+                                            int countrightObstacles[] = countObstacles(right);
+
+                                            if ((countObstacles[1] > 0 && countrightObstacles[1] > 0) ||
+                                                    (countrightObstacles[1] == 0) ||
+                                                    countObstacles[1] > countrightObstacles[1] ||
+                                                    countObstacles[0] > countrightObstacles[0]) {
+                                                return TURN_RIGHT;
+                                            }
+
+                                        } else if (lane == 4) {
+                                            int countleftObstacles[] = countObstacles(left);
+
+                                            if ((countObstacles[1] > 0 && countleftObstacles[1] > 0) ||
+                                                    (countleftObstacles[1] == 0) ||
+                                                    countObstacles[1] > countleftObstacles[1] ||
+                                                    countObstacles[0] > countleftObstacles[0]) {
+                                                return TURN_LEFT;
+                                            }
+
+                                        } else {
+                                            int countleftObstacles[] = countObstacles(left);
+                                            int countrightObstacles[] = countObstacles(right);
+
+                                            if (countObstacles[1] > 0) {
+                                                if (countleftObstacles[1] == 0 && (countrightObstacles[0] >= countleftObstacles[0])) {
+                                                    if (countrightObstacles[1] == 0 &&
+                                                            countrightObstacles[0] == countleftObstacles[0] &&
+                                                            lane == 2) {
+                                                        return TURN_RIGHT;
+                                                    } else {
+                                                        return TURN_LEFT;
+                                                    }
+                                                } else {
+                                                    return TURN_RIGHT;
+                                                }
+                                            } else {
+                                                if (countleftObstacles[1] == 0 &&
+                                                        (countrightObstacles[0] >= countleftObstacles[0]) &&
+                                                        (countObstacles[0] > countleftObstacles[0])) {
+                                                    if (countrightObstacles[1] == 0 &&
+                                                            countrightObstacles[0] == countleftObstacles[0] &&
+                                                            lane == 2) {
+                                                        return TURN_RIGHT;
+                                                    }
+                                                    return TURN_LEFT;
+                                                } else if (countrightObstacles[1] == 0 &&
+                                                        (countleftObstacles[0] >= countrightObstacles[0]) &&
+                                                        (countObstacles[0] > countrightObstacles[0])) {
+                                                    if (countleftObstacles[1] == 0 &&
+                                                            countrightObstacles[0] == countleftObstacles[0] &&
+                                                            lane == 3) {
+                                                        return TURN_LEFT;
+                                                    }
+                                                    return TURN_RIGHT;
+                                                }
+                                            }
+                                        }
+                                    }
+
                                 }
                             }
                         }
@@ -172,83 +246,6 @@ public class Bot {
                 opponent.position.lane == myCar.position.lane &&
                 opponent.position.block < myCar.position.block) {
             return OIL;
-        }
-
-        // Menghindar
-        int[] countObstacles = countObstacles(blocks);
-        if (countObstacles[0] > 0 || countObstacles[1] > 0) {
-            if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
-                List<Object> nextBlock = blocks.subList(blocks.size() - 1, blocks.size());
-                if (!(nextBlock.contains(Terrain.MUD) ||
-                        nextBlock.contains(Terrain.WALL) ||
-                        nextBlock.contains(Terrain.OIL_SPILL) ||
-                        nextBlock.contains(Terrain.CYBER_TRUCK))) {
-                    return LIZARD;
-                }
-            }
-
-            if (lane == 1) {
-                List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
-                int countrightObstacles[] = countObstacles(right);
-
-                if ((countObstacles[1] > 0 && countrightObstacles[1] > 0) ||
-                        (countrightObstacles[1] == 0) ||
-                        countObstacles[1] > countrightObstacles[1] ||
-                        countObstacles[0] > countrightObstacles[0]) {
-                    return TURN_RIGHT;
-                }
-
-            } else if (lane == 4) {
-                List<Object> left = getBlocksInFront(lane - 1, myCar.position.block, myCar.speed - 1, gameState);
-                int countleftObstacles[] = countObstacles(left);
-
-                if ((countObstacles[1] > 0 && countleftObstacles[1] > 0) ||
-                        (countleftObstacles[1] == 0) ||
-                        countObstacles[1] > countleftObstacles[1] ||
-                        countObstacles[0] > countleftObstacles[0]) {
-                    return TURN_LEFT;
-                }
-
-            } else {
-                List<Object> left = getBlocksInFront(lane - 1, myCar.position.block, myCar.speed - 1, gameState);
-                List<Object> right = getBlocksInFront(lane + 1, myCar.position.block, myCar.speed - 1, gameState);
-                int countleftObstacles[] = countObstacles(left);
-                int countrightObstacles[] = countObstacles(right);
-
-                if (countObstacles[1] > 0) {
-                    if (countleftObstacles[1] == 0 && (countrightObstacles[0] >= countleftObstacles[0])) {
-                        if (countrightObstacles[1] == 0 &&
-                                countrightObstacles[0] == countleftObstacles[0] &&
-                                lane == 2) {
-                            return TURN_RIGHT;
-                        } else {
-                            return TURN_LEFT;
-                        }
-                    } else {
-                        return TURN_RIGHT;
-                    }
-                } else {
-                    if (countleftObstacles[1] == 0 &&
-                            (countrightObstacles[0] >= countleftObstacles[0]) &&
-                            (countObstacles[0] > countleftObstacles[0])) {
-                        if (countrightObstacles[1] == 0 &&
-                                countrightObstacles[0] == countleftObstacles[0] &&
-                                lane == 2) {
-                            return TURN_RIGHT;
-                        }
-                        return TURN_LEFT;
-                    } else if (countrightObstacles[1] == 0 &&
-                            (countleftObstacles[0] >= countrightObstacles[0]) &&
-                            (countObstacles[0] > countrightObstacles[0])) {
-                        if (countleftObstacles[1] == 0 &&
-                                countrightObstacles[0] == countleftObstacles[0] &&
-                                lane == 3) {
-                            return TURN_LEFT;
-                        }
-                        return TURN_RIGHT;
-                    }
-                }
-            }
         }
 
         return ACCELERATE;

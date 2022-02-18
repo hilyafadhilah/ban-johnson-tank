@@ -58,8 +58,18 @@ public class Bot {
             }
         }
 
+        // Fix first if too damaged to move
+        if (myCar.damage >= 2) {
+            return FIX;
+        }
+
+        // Accelerate first if going to slow
+        if (myCar.speed <= 3) {
+            return ACCELERATE;
+        }
+
         if (hascount[4] > 0) {
-            if (((1500 - opponent.position.block) / hascount[4]) < 10
+            if (((1500 - opponent.position.block) / hascount[4]) < 20
                     && opponent.position.block >= myCar.position.block) {
                 if (opponent.speed > 3) {
                     return EMP;
@@ -67,7 +77,7 @@ public class Bot {
             }
         }
 
-        if ((myCar.position.block - opponent.position.block) < (hascount[4] * 8)
+        if ((myCar.position.block - opponent.position.block) < ((hascount[4] * 8) + 40)
                 && (1500 - myCar.position.block) > 200) {
             int powerupmid[] = countPowerUp(blocks, myCar.powerups);
             if (lane == 1) {
@@ -81,15 +91,7 @@ public class Bot {
                     } else if (powerupright[2] == powerupmid[2]) {
                         if (powerupright[1] > powerupmid[1]) {
                             return TURN_RIGHT;
-                        } else if (powerupright[1] == powerupmid[1]) {
-                            if (powerupright[3] > powerupmid[3]) {
-                                return TURN_RIGHT;
-                            } else if (powerupright[3] == powerupmid[3]) {
-                                if (powerupright[0] > powerupmid[0]) {
-                                    return TURN_RIGHT;
-                                }
-                            }
-                        }
+                        } 
                     }
                 }
             } else if (lane == 4) {
@@ -103,15 +105,7 @@ public class Bot {
                     } else if (powerupleft[2] == powerupmid[2]) {
                         if (powerupleft[1] > powerupmid[1]) {
                             return TURN_LEFT;
-                        } else if (powerupleft[1] == powerupmid[1]) {
-                            if (powerupleft[3] > powerupmid[3]) {
-                                return TURN_LEFT;
-                            } else if (powerupleft[3] == powerupmid[3]) {
-                                if (powerupleft[0] > powerupmid[0]) {
-                                    return TURN_LEFT;
-                                }
-                            }
-                        }
+                        } 
                     }
                 }
             } else {
@@ -133,32 +127,10 @@ public class Bot {
                             return TURN_LEFT;
                         } else if (powerupright[1] > powerupmid[1] && powerupright[1] > powerupmid[1]) {
                             return TURN_RIGHT;
-                        } else if (powerupleft[1] == powerupright[1] && powerupmid[1] <= powerupleft[1]) {
-                            if (powerupleft[3] > powerupmid[3] && powerupleft[3] > powerupright[3]) {
-                                return TURN_LEFT;
-                            } else if (powerupright[3] > powerupmid[3] && powerupright[3] > powerupmid[3]) {
-                                return TURN_RIGHT;
-                            } else if (powerupleft[3] == powerupright[3] && powerupmid[3] <= powerupleft[3]) {
-                                if (powerupleft[0] > powerupmid[0] && powerupleft[0] > powerupright[0]) {
-                                    return TURN_LEFT;
-                                } else if (powerupright[0] > powerupmid[0] && powerupright[0] > powerupmid[0]) {
-                                    return TURN_RIGHT;
-                                }
-                            }
                         }
                     }
                 }
             }
-        }
-
-        // Fix first if too damaged to move
-        if (myCar.damage >= 2) {
-            return FIX;
-        }
-
-        // Accelerate first if going to slow
-        if (myCar.speed <= 3) {
-            return ACCELERATE;
         }
 
         // Basic fix logic
@@ -241,6 +213,11 @@ public class Bot {
         }
 
         // Basic improvement logic
+        if (hasPowerUp(PowerUps.LIZARD, myCar.powerups)) {
+            if ((countObstacles[0] + countObstacles[1]) > 3 || myCar.speed == 15) {
+                return LIZARD;
+            }
+        }
         if (hasPowerUp(PowerUps.BOOST, myCar.powerups) && !myCar.boosting) {
             List<Object> boosted = getBlocksInFront(myCar.position.lane, myCar.position.block + 1, 15 - 1,
                     gameState);
