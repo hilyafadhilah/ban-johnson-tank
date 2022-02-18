@@ -24,7 +24,7 @@ Bot yang terpilih adalah bot 5, Johnson United.
 
 ## Requirements dan Instalasi
 
-Terdapat 8 program bot yang ditulis dalam bahasa Java versi 8.
+Terdapat 6 program bot yang ditulis dalam bahasa Java versi 8.
 Instalasi tiap bot dilakukan dengan utility Maven yang digabungkan dengan `make`.
 Sebagai contoh:
 
